@@ -6,22 +6,43 @@ import tqdm
 
 proj_name=sys.argv[1]
 
+def clean_string(input_string):
+    """
+    This function removes all newlines and extra spaces from the input string.
+    
+    Parameters:
+    input_string (str): The string to be cleaned.
+    
+    Returns:
+    str: A cleaned string with no newlines and single spaces between words.
+    """
+    # Remove newlines
+    no_newlines = input_string.replace('\n', ' ')
+    
+    # Split the string into words and rejoin with a single space
+    cleaned_string = ' '.join(no_newlines.split())
+    
+    return cleaned_string
+
+
+
 def divide_str_array(strin,threshold_chars=500):
     arr=strin.split('\n')
     result=[]
     tmp=''
     for i in arr:
         i=i.replace("“","").replace("”","")
-        tmp+=i+'。\n'
+        tmp+=i +'。\n'
         if len(tmp) > threshold_chars:
             result.append(tmp)
             tmp=""
+    result.append(tmp)
     return result
     
 
 def read_epub(epub_file_path):
     book = epub.read_epub(epub_file_path)
-
+    current_h1 = ""
     chapters = []
 
     for item in book.get_items():
@@ -42,7 +63,12 @@ def read_epub(epub_file_path):
             chapter_title=""
             first_heading = soup.find(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'])
             if first_heading:
-                chapter_title = first_heading.get_text()
+                if first_heading.name == 'h1':
+                    current_h1 = clean_string(first_heading.get_text(strip=True))
+                elif first_heading.name == 'h2' and len(current_h1) > 0:
+                    chapter_title = current_h1+"--"
+
+                chapter_title += clean_string(first_heading.get_text())
             
             text_content=divide_str_array(text_content)
             
@@ -64,10 +90,19 @@ def gen_tts(f):
         subprocess.run(cmd_ffmpeg)
         subprocess.run(["rm",f"{proj_name}/{f}.aiff"])
 
+
 if __name__ == '__main__':
     
-    epub_file_path = proj_name+'.epub'
-    chapters = read_epub(epub_file_path)
+    if os.path.exists(proj_name+".txt"):
+        chapters=[]
+        with open(proj_name+".txt") as f:
+            content=f.read()
+            for i in divide_str_array(content):
+                chapters.append(("","C",i,None))
+        
+    else:
+        epub_file_path = proj_name+'.epub'
+        chapters = read_epub(epub_file_path)
     directory_path=proj_name
     if not os.path.exists(directory_path):
         # If it doesn't exist, create it
@@ -77,7 +112,7 @@ if __name__ == '__main__':
     for chapter_id, chapter_title, chapter_content,soup in chapters:
         cnt+=1
         chapter_title=chapter_title.replace("/","_")
-        filelist.append(f"{cnt:03d}.{chapter_title}")
+        filelist.append(f"{cnt:04d}.{chapter_title}")
         path=os.path.join(directory_path,f"{cnt:03d}.{chapter_title}.txt")
         with open(path,"w") as f:
             f.write(chapter_content)
