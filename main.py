@@ -113,11 +113,11 @@ if __name__ == '__main__':
         cnt+=1
         chapter_title=chapter_title.replace("/","_")
         filelist.append(f"{cnt:04d}.{chapter_title}")
-        path=os.path.join(directory_path,f"{cnt:03d}.{chapter_title}.txt")
+        path=os.path.join(directory_path,f"{cnt:04d}.{chapter_title}.txt")
         with open(path,"w") as f:
             f.write(chapter_content)
 
-    with multiprocessing.Pool(4) as po:
+    with multiprocessing.Pool(6) as po:
         res=po.imap(gen_tts,filelist)
         for _ in tqdm.tqdm(res,total=len(filelist)):
             pass
